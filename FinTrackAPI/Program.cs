@@ -91,6 +91,8 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<JwtService>();
 
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // Swagger is a full map of the API - keep it out of production.
@@ -108,6 +110,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapGoogleAuthEndpoints();
 app.MapExpenseEndpoints();
 app.MapIncomeEndpoints();
 app.MapRecurringIncomeEndpoints();
