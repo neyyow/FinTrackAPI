@@ -61,9 +61,10 @@ namespace FinTrackAPI.Endpoints
                 }
                 catch (Exception ex)
                 {
-                    return Results.Problem(
-                        detail: $"Could not reach Google to verify sign-in: {ex.Message}",
-                        statusCode: StatusCodes.Status502BadGateway);
+                    // A plain string body, like every other error response in this file -
+                    // Results.Problem() returns a JSON object instead, which the React
+                    // app can't render (it expects err.response.data to be a string).
+                    return Results.BadRequest($"Could not reach Google to verify sign-in: {ex.Message}");
                 }
 
                 var expectedClientId = config["Google:ClientId"];
