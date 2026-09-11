@@ -104,7 +104,28 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// CORS has to come before the exception handler below - the CORS header gets
+// attached to the response as soon as this middleware runs, so as long as
+// this stays first, it stays on the response even if something later throws
+// and the exception handler takes over. Without that ordering, an unhandled
+// error anywhere in the app comes back to the browser with no CORS header at
+// all, and shows up there as a "blocked by CORS policy" error that has
+// nothing to do with CORS - which is exactly what happened with the
+// /auth/google endpoint.
 app.UseCors("AllowReactApp");
+
+// Safety net: turn any unhandled exception into a clean JSON error response
+// instead of a raw crash, so a bug in one endpoint never again masquerades
+// as a CORS problem in the browser console.
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync("{\"error\":\"Something went wrong. Please try again.\"}");
+    });
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

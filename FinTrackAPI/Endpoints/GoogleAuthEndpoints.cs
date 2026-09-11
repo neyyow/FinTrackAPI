@@ -41,14 +41,30 @@ namespace FinTrackAPI.Endpoints
                     return Results.BadRequest("Missing Google sign-in token.");
 
                 // Ask Google itself to verify this token - checks the signature and expiry for us.
-                var client = httpClientFactory.CreateClient();
-                var response = await client.GetAsync(
-                    $"https://oauth2.googleapis.com/tokeninfo?id_token={Uri.EscapeDataString(request.IdToken)}");
+                // This is an outbound call from the server, so it can fail for reasons that have
+                // nothing to do with the sign-in itself (host network restrictions, a timeout,
+                // Google being briefly unreachable). Without this try/catch, any of those throw
+                // an unhandled exception, which strips the CORS header from the response and
+                // shows up in the browser as a misleading "blocked by CORS policy" error instead
+                // of the real problem.
+                GoogleTokenInfo? tokenInfo;
+                try
+                {
+                    var client = httpClientFactory.CreateClient();
+                    var response = await client.GetAsync(
+                        $"https://oauth2.googleapis.com/tokeninfo?id_token={Uri.EscapeDataString(request.IdToken)}");
 
-                if (!response.IsSuccessStatusCode)
-                    return Results.BadRequest("Could not verify Google sign-in. Please try again.");
+                    if (!response.IsSuccessStatusCode)
+                        return Results.BadRequest("Could not verify Google sign-in. Please try again.");
 
-                var tokenInfo = await response.Content.ReadFromJsonAsync<GoogleTokenInfo>();
+                    tokenInfo = await response.Content.ReadFromJsonAsync<GoogleTokenInfo>();
+                }
+                catch (Exception ex)
+                {
+                    return Results.Problem(
+                        detail: $"Could not reach Google to verify sign-in: {ex.Message}",
+                        statusCode: StatusCodes.Status502BadGateway);
+                }
 
                 var expectedClientId = config["Google:ClientId"];
                 if (tokenInfo == null || string.IsNullOrEmpty(expectedClientId) || tokenInfo.Aud != expectedClientId)
