@@ -1,4 +1,4 @@
-using FinTrackAPI.Data;
+﻿using FinTrackAPI.Data;
 using FinTrackAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using FinTrackAPI.Extensions;
@@ -56,6 +56,31 @@ namespace FinTrackAPI.Endpoints
                     .FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId.Value);
 
                 return income is not null ? Results.Ok(income) : Results.NotFound();
+            }).RequireAuthorization();
+
+            // UPDATE - only if it belongs to the signed-in user
+            app.MapPut("/income/{id}", async (AppDbContext db, int id, Income input, HttpContext http) =>
+            {
+                var userId = http.GetUserId();
+                if (userId is null) return Results.Unauthorized();
+
+                var income = await db.Income
+                    .FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId.Value);
+
+                if (income == null) return Results.NotFound();
+
+                if (input.Amount <= 0)
+                    return Results.BadRequest("Amount must be greater than 0.");
+
+                var before = $"₱{income.Amount:0.00} {income.Source}";
+                income.Amount = input.Amount;
+                income.Source = input.Source;
+                var after = $"₱{income.Amount:0.00} {income.Source}";
+
+                ActivityLogger.Log(db, userId.Value, "Edited", "Income", income.Amount, income.Source, $"Changed {before} to {after}");
+
+                await db.SaveChangesAsync();
+                return Results.Ok(income);
             }).RequireAuthorization();
 
             // DELETE - only if it belongs to the signed-in user
