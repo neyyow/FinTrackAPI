@@ -39,16 +39,12 @@ namespace FinTrackAPI.Endpoints
                 if (user == null)
                     return Results.NotFound("User not found.");
 
-                // Check if another account already uses this email
-                var existingUser = await db.Users.FirstOrDefaultAsync(u =>
-                    u.Email == request.Email &&
-                    u.Id != userId.Value);
-
-                if (existingUser != null)
-                    return Results.BadRequest("Email is already in use.");
-
+                // Email is not editable here on purpose - it's also the identity
+                // key Google Sign-In matches on (see GoogleAuthEndpoints), so
+                // changing it would silently repoint this account's data to
+                // whoever signs in with the new email. Only the display name
+                // can change.
                 user.Username = request.Username;
-                user.Email = request.Email;
 
                 await db.SaveChangesAsync();
 
