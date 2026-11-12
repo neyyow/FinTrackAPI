@@ -16,6 +16,7 @@ namespace FinTrackAPI.Data
         public DbSet<RecurringIncome> RecurringIncomes { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<BudgetTarget> BudgetTargets { get; set; }
+        public DbSet<Wallet> Wallets { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,6 +29,7 @@ namespace FinTrackAPI.Data
             modelBuilder.Entity<RecurringIncome>().Property(r => r.Amount).HasPrecision(18, 2);
             modelBuilder.Entity<ActivityLog>().Property(a => a.Amount).HasPrecision(18, 2);
             modelBuilder.Entity<BudgetTarget>().Property(b => b.Amount).HasPrecision(18, 2);
+            modelBuilder.Entity<Wallet>().Property(w => w.Name).HasMaxLength(50);
 
             // Foreign keys: every UserId must point at a real user, and deleting
             // a user automatically cleans up everything that belonged to them.
@@ -60,6 +62,21 @@ namespace FinTrackAPI.Data
                 .WithMany()
                 .HasForeignKey(b => b.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Wallet>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(w => w.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // An expense may point at a wallet, but deleting a wallet must NOT delete
+            // the expense. (SQL Server also forbids a second cascade path from User,
+            // so the wallet endpoint clears WalletId on those expenses itself.)
+            modelBuilder.Entity<Expense>()
+                .HasOne<Wallet>()
+                .WithMany()
+                .HasForeignKey(e => e.WalletId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
         }
     }
 }

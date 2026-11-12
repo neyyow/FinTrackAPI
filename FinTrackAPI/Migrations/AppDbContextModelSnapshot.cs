@@ -120,9 +120,14 @@ namespace FinTrackAPI.Migrations
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("WalletId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("WalletId");
 
                     b.ToTable("Expenses");
                 });
@@ -223,6 +228,29 @@ namespace FinTrackAPI.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("FinTrackAPI.Models.Wallet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Wallets");
+                });
+
             modelBuilder.Entity("FinTrackAPI.Models.ActivityLog", b =>
                 {
                     b.HasOne("FinTrackAPI.Models.User", null)
@@ -248,6 +276,10 @@ namespace FinTrackAPI.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("FinTrackAPI.Models.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId");
                 });
 
             modelBuilder.Entity("FinTrackAPI.Models.Income", b =>
@@ -260,6 +292,15 @@ namespace FinTrackAPI.Migrations
                 });
 
             modelBuilder.Entity("FinTrackAPI.Models.RecurringIncome", b =>
+                {
+                    b.HasOne("FinTrackAPI.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinTrackAPI.Models.Wallet", b =>
                 {
                     b.HasOne("FinTrackAPI.Models.User", null)
                         .WithMany()

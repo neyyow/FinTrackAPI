@@ -134,5 +134,6 @@ app.MapSummaryEndpoints();
 app.MapProfileEndpoints();
 app.MapLogsEndpoints();
 app.MapBudgetEndpoints();
+app.MapWalletEndpoints();
 
 app.Run();

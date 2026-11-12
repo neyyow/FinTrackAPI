@@ -8,6 +8,10 @@ namespace FinTrackAPI.Endpoints
 {
     public static class ExpenseEndpoints
     {
+        // A wallet is only valid if it exists AND belongs to the signed-in user.
+        private static Task<bool> WalletBelongsToUser(AppDbContext db, int walletId, int userId) =>
+            db.Wallets.AnyAsync(w => w.Id == walletId && w.UserId == userId);
+
         public static void MapExpenseEndpoints(this WebApplication app)
         {
             // CREATE
@@ -18,6 +22,9 @@ namespace FinTrackAPI.Endpoints
 
                 if (expense.Amount <= 0)
                     return Results.BadRequest("Amount must be greater than 0.");
+
+                if (expense.WalletId is int newWalletId && !await WalletBelongsToUser(db, newWalletId, userId.Value))
+                    return Results.BadRequest("That wallet was not found.");
 
                 expense.UserId = userId.Value;
 
@@ -67,10 +74,14 @@ namespace FinTrackAPI.Endpoints
                 if (input.Amount <= 0)
                     return Results.BadRequest("Amount must be greater than 0.");
 
+                if (input.WalletId is int inputWalletId && !await WalletBelongsToUser(db, inputWalletId, userId.Value))
+                    return Results.BadRequest("That wallet was not found.");
+
                 var before = $"₱{expense.Amount:0.00} {expense.Category}";
                 expense.Amount = input.Amount;
                 expense.Category = input.Category;
                 expense.Description = input.Description;
+                expense.WalletId = input.WalletId;
                 var after = $"₱{expense.Amount:0.00} {expense.Category}";
 
                 ActivityLogger.Log(db, userId.Value, "Edited", "Expense", expense.Amount, expense.Category, $"Changed {before} to {after}");
